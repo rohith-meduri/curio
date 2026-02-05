@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WikiTok Final</title>
+    <title>Curio</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -148,7 +148,6 @@
         .drawer {
             position: fixed; top: 0; left: 0; height: 100%; width: 320px;
             background: var(--surface-color);
-            /* Raised Z-Index to cover the top bar */
             z-index: 600; 
             transform: translateX(-100%);
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -323,7 +322,8 @@
         const API_URL = "https://en.wikipedia.org/api/rest_v1/page/random/summary";
         const app = document.getElementById('app');
         
-        let savedItems = JSON.parse(localStorage.getItem('wikitok_saved')) || [];
+        // --- Updated Storage Key to 'curio_saved' ---
+        let savedItems = JSON.parse(localStorage.getItem('curio_saved')) || [];
         let seenIds = new Set();
         let isLoading = false;
         let currentCardData = null;
@@ -401,7 +401,7 @@
                 <div class="saved-item" onclick="viewSavedCard(${index})">
                     <div class="saved-info">
                         <div class="saved-title">${item.title}</div>
-                        <div class="saved-desc">${item.description || 'Encyclopedia Entry'}</div>
+                        <div class="saved-desc">${item.description || 'Curio Entry'}</div>
                     </div>
                     <div class="delete-btn" onclick="deleteSavedItem(event, ${index})" title="Remove">
                         <span class="material-symbols-rounded" style="font-size:20px">delete</span>
@@ -414,7 +414,7 @@
             event.stopPropagation();
             const removedItem = savedItems[index];
             savedItems.splice(index, 1);
-            localStorage.setItem('wikitok_saved', JSON.stringify(savedItems));
+            localStorage.setItem('curio_saved', JSON.stringify(savedItems));
             renderSavedList();
             if (currentCardData && currentCardData.pageid === removedItem.pageid) {
                 updateBookmarkIcon();
@@ -436,7 +436,7 @@
             if(idx > -1) savedItems.splice(idx, 1);
             else savedItems.push(currentCardData);
             
-            localStorage.setItem('wikitok_saved', JSON.stringify(savedItems));
+            localStorage.setItem('curio_saved', JSON.stringify(savedItems));
             updateBookmarkIcon();
         }
 
@@ -486,7 +486,7 @@
             div.innerHTML = `
                 <img src="${imgUrl}" class="card-bg" loading="lazy">
                 <div class="card-content">
-                    <div class="chip">${data.description || 'WikiTok'}</div>
+                    <div class="chip">${data.description || 'Curio'}</div>
                     <h1>${data.title}</h1>
                     <p>${data.extract}</p>
                     <div class="read-more-trigger" onclick="openSheet(this)">
