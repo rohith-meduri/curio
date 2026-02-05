@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WikiTok Final</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+
+    <style>
+        :root {
+            --bg-color: #050505;
+            --surface-color: #1A1A1A;
+            --text-primary: #F2F2F2;
+            --text-secondary: #A0A0A0;
+            --accent-color: #D0BCFF;
+            --danger-color: #FFB4AB;
+            --radius-xl: 24px;
+            --nav-height: 70px;
+            --font-stack: 'Outfit', sans-serif; 
+            
+            --h1-size: 2rem;
+            --p-size: 1.05rem;
+            --h1-mobile: 1.75rem;
+            --p-mobile: 1rem;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-stack);
+            overflow: hidden;
+        }
+
+        /* --- Top Bar (Z-Index 500) --- */
+        .top-bar {
+            position: fixed; top: 0; left: 0; width: 100%;
+            height: var(--nav-height);
+            padding: 0 24px;
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 500; 
+            pointer-events: none;
+        }
+
+        .icon-btn {
+            pointer-events: auto;
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .icon-btn:hover { background: rgba(255,255,255,0.2); transform: scale(1.05); }
+        .icon-btn:active { transform: scale(0.95); }
+        .icon-btn.active { background: var(--accent-color); color: #000; border-color: transparent; }
+        
+        .right-actions { display: flex; gap: 12px; pointer-events: auto; }
+
+        /* --- Main Feed --- */
+        #app {
+            height: 100vh; width: 100vw;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+        }
+        #app::-webkit-scrollbar { display: none; }
+
+        .card {
+            height: 100vh; width: 100%;
+            scroll-snap-align: start;
+            position: relative;
+            display: flex; flex-direction: column;
+            justify-content: flex-end;
+            overflow: hidden;
+        }
+
+        .card-bg {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover; opacity: 0.5;
+            z-index: -1;
+            transition: transform 10s ease;
+        }
+        .card:hover .card-bg { transform: scale(1.05); }
+
+        .card-content {
+            z-index: 2; width: 100%;
+            padding: 40px; padding-bottom: 80px;
+            background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 60%, transparent 100%);
+            display: flex; flex-direction: column;
+            align-items: center; text-align: center;
+        }
+
+        .chip {
+            font-size: 0.75rem; letter-spacing: 1px; text-transform: uppercase;
+            color: var(--text-secondary); margin-bottom: 16px;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 4px 12px; border-radius: 100px;
+            background: rgba(0,0,0,0.3); backdrop-filter: blur(4px);
+        }
+
+        h1 {
+            font-size: var(--h1-size); font-weight: 700; margin-bottom: 16px;
+            max-width: 600px; line-height: 1.3;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        p {
+            font-size: var(--p-size); line-height: 1.7; color: #ddd;
+            max-width: 550px; font-weight: 400;
+            display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
+            overflow: hidden; margin-bottom: 10px;
+        }
+
+        .read-more-trigger {
+            color: var(--accent-color);
+            cursor: pointer; font-weight: 500; font-size: 0.95rem;
+            margin-top: 8px; display: inline-block;
+            border-bottom: 1px solid transparent; transition: border 0.2s;
+            padding: 4px;
+        }
+        .read-more-trigger:hover { border-bottom-color: var(--accent-color); }
+
+        @media (max-width: 768px) {
+            .card-content { align-items: flex-start; text-align: left; padding: 24px; padding-bottom: 100px; }
+            h1 { font-size: var(--h1-mobile); }
+            p { font-size: var(--p-mobile); -webkit-line-clamp: 5; }
+        }
+
+        /* --- OVERLAYS --- */
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);
+            z-index: 300; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .overlay.active { opacity: 1; pointer-events: auto; }
+
+        /* --- Saved Drawer (Z-Index 600 - ABOVE Top Bar) --- */
+        .drawer {
+            position: fixed; top: 0; left: 0; height: 100%; width: 320px;
+            background: var(--surface-color);
+            /* Raised Z-Index to cover the top bar */
+            z-index: 600; 
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; flex-direction: column;
+            border-right: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+        }
+        .drawer.active { transform: translateX(0); }
+
+        .drawer-header {
+            padding: 24px; border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .drawer-body { flex: 1; overflow-y: auto; padding: 0 16px; }
+        
+        .saved-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 8px; 
+            border-bottom: 1px solid rgba(255,255,255,0.05); 
+            cursor: pointer;
+            transition: background 0.2s;
+            border-radius: 8px;
+        }
+        .saved-item:hover { background: rgba(255,255,255,0.05); }
+        
+        .saved-info { flex: 1; margin-right: 12px; }
+        .saved-title { font-weight: 600; font-size: 1rem; margin-bottom: 4px; color: #fff; }
+        .saved-desc { font-size: 0.8rem; opacity: 0.6; }
+        
+        .delete-btn {
+            width: 32px; height: 32px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+        .delete-btn:hover { background: rgba(255, 180, 171, 0.1); color: var(--danger-color); }
+
+        /* --- Detail Sheet --- */
+        .sheet {
+            position: fixed; 
+            top: var(--nav-height); 
+            left: 0; right: 0; bottom: 0;
+            background: var(--surface-color);
+            z-index: 350;
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.1, 0.7, 0.1, 1);
+            display: flex; flex-direction: column;
+            border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+        }
+        .sheet.active { transform: translateY(0); }
+
+        .sheet-header-controls {
+            padding: 16px 24px;
+            display: flex; justify-content: flex-end;
+            background: var(--surface-color);
+            z-index: 10;
+        }
+        .close-circle {
+            background: rgba(255,255,255,0.1); width: 32px; height: 32px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+        }
+        
+        .sheet-body { flex: 1; overflow-y: auto; padding: 0 32px 100px 32px; }
+        
+        .sheet-img {
+            width: 100%; height: 250px; object-fit: cover;
+            border-radius: 16px; margin: 16px 0 24px 0; background: #222;
+        }
+        
+        .meta-row {
+            display: flex; gap: 16px; color: var(--text-secondary);
+            font-size: 0.85rem; margin-bottom: 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 16px;
+        }
+        .meta-item { display: flex; align-items: center; gap: 6px; }
+        .meta-item .material-symbols-rounded { font-size: 18px; }
+
+        .sheet h2 { font-size: 2rem; margin-bottom: 8px; line-height: 1.2; margin-top: 10px; }
+        
+        .sheet-text { 
+            font-size: 1.1rem; color: #ccc; 
+            line-height: 1.8; margin-bottom: 40px; 
+            white-space: pre-wrap; 
+        }
+        
+        .cta-container {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            padding: 24px;
+            background: linear-gradient(to top, var(--surface-color) 80%, transparent);
+            display: flex; justify-content: center;
+        }
+
+        .visit-btn {
+            background: var(--text-primary); color: #000;
+            padding: 14px 32px; border-radius: 100px;
+            text-decoration: none; font-weight: 600;
+            display: flex; align-items: center; gap: 8px;
+            transition: transform 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .visit-btn:hover { transform: scale(1.02); }
+
+        .loader {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 40px; height: 40px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: var(--accent-color);
+            border-radius: 50%; animation: spin 1s infinite linear;
+        }
+        
+        .skeleton-text {
+            height: 14px; background: rgba(255,255,255,0.1);
+            border-radius: 4px; margin-bottom: 12px;
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+        @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+        @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 0.6; } 100% { opacity: 0.3; } }
+
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <div class="icon-btn" onclick="toggleSavedDrawer()" title="Bookmarks">
+            <span class="material-symbols-rounded">menu</span>
+        </div>
+        <div class="right-actions">
+            <div class="icon-btn" onclick="surpriseMe()" title="Shuffle">
+                <span class="material-symbols-rounded">shuffle</span>
+            </div>
+            <div class="icon-btn" id="bookmarkBtn" onclick="toggleSave()" title="Save">
+                <span class="material-symbols-rounded" id="bookmarkIcon">bookmark_border</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="app">
+        <div class="loader" id="initLoader"></div>
+    </div>
+
+    <div class="overlay" id="universalOverlay" onclick="closeAllOverlays()"></div>
+
+    <div class="drawer" id="savedDrawer">
+        <div class="drawer-header">
+            <h3 style="font-size:1.2rem;">Bookmarks</h3>
+            <div class="close-circle" onclick="closeAllOverlays()">
+                <span class="material-symbols-rounded">close</span>
+            </div>
+        </div>
+        <div class="drawer-body" id="savedList"></div>
+    </div>
+
+    <div class="sheet" id="readMoreSheet">
+        <div class="sheet-header-controls">
+            <div class="close-circle" onclick="closeAllOverlays()">
+                <span class="material-symbols-rounded">close</span>
+            </div>
+        </div>
+        <div class="sheet-body" id="sheetBody"></div>
+        <div class="cta-container">
+            <a href="#" target="_blank" id="sheetLink" class="visit-btn">
+                Visit Source <span class="material-symbols-rounded">arrow_outward</span>
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://en.wikipedia.org/api/rest_v1/page/random/summary";
+        const app = document.getElementById('app');
+        
+        let savedItems = JSON.parse(localStorage.getItem('wikitok_saved')) || [];
+        let seenIds = new Set();
+        let isLoading = false;
+        let currentCardData = null;
+
+        // --- Navigation ---
+        function closeAllOverlays() {
+            document.getElementById('universalOverlay').classList.remove('active');
+            document.getElementById('savedDrawer').classList.remove('active');
+            document.getElementById('readMoreSheet').classList.remove('active');
+        }
+
+        function toggleSavedDrawer() {
+            const drawer = document.getElementById('savedDrawer');
+            const overlay = document.getElementById('universalOverlay');
+            
+            if (drawer.classList.contains('active')) {
+                closeAllOverlays();
+            } else {
+                closeAllOverlays();
+                renderSavedList();
+                drawer.classList.add('active');
+                overlay.classList.add('active');
+            }
+        }
+
+        // --- Deep Dive Logic ---
+        async function openSheet(trigger) {
+            const card = trigger.closest('.card');
+            const data = JSON.parse(card.dataset.json);
+            const highRes = data.thumbnail ? data.thumbnail.source.replace(/\/\d+px-/, '/1200px-') : '';
+            const dateStr = data.timestamp ? new Date(data.timestamp).toLocaleDateString() : 'Recently';
+
+            const sheetBody = document.getElementById('sheetBody');
+            sheetBody.innerHTML = `
+                <h2>${data.title}</h2>
+                <div class="meta-row">
+                    <div class="meta-item"><span class="material-symbols-rounded">update</span> Updated: ${dateStr}</div>
+                </div>
+                <img src="${highRes}" class="sheet-img">
+                <div id="detailedText">
+                    <div class="skeleton-text" style="width:100%"></div>
+                    <div class="skeleton-text" style="width:90%"></div>
+                    <div class="skeleton-text" style="width:95%"></div>
+                    <div class="skeleton-text" style="width:80%"></div>
+                </div>
+            `;
+            document.getElementById('sheetLink').href = data.content_urls.desktop.page;
+            
+            closeAllOverlays();
+            document.getElementById('readMoreSheet').classList.add('active');
+            document.getElementById('universalOverlay').classList.add('active');
+
+            try {
+                const detailUrl = `https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro&explaintext&redirects=1&origin=*&titles=${encodeURIComponent(data.title)}`;
+                const response = await fetch(detailUrl);
+                const detailData = await response.json();
+                const pages = detailData.query.pages;
+                const pageId = Object.keys(pages)[0];
+                const fullIntro = pages[pageId].extract;
+                
+                document.getElementById('detailedText').innerHTML = `<div class="sheet-text">${fullIntro || data.extract}</div>`;
+            } catch (e) {
+                document.getElementById('detailedText').innerHTML = `<div class="sheet-text">${data.extract}</div>`;
+            }
+        }
+
+        // --- Saved Items Logic ---
+        function renderSavedList() {
+            const list = document.getElementById('savedList');
+            if (savedItems.length === 0) {
+                list.innerHTML = `<div style="opacity:0.5; margin-top:20px; text-align:center;">Nothing saved yet.</div>`;
+                return;
+            }
+            list.innerHTML = savedItems.map((item, index) => `
+                <div class="saved-item" onclick="viewSavedCard(${index})">
+                    <div class="saved-info">
+                        <div class="saved-title">${item.title}</div>
+                        <div class="saved-desc">${item.description || 'Encyclopedia Entry'}</div>
+                    </div>
+                    <div class="delete-btn" onclick="deleteSavedItem(event, ${index})" title="Remove">
+                        <span class="material-symbols-rounded" style="font-size:20px">delete</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function deleteSavedItem(event, index) {
+            event.stopPropagation();
+            const removedItem = savedItems[index];
+            savedItems.splice(index, 1);
+            localStorage.setItem('wikitok_saved', JSON.stringify(savedItems));
+            renderSavedList();
+            if (currentCardData && currentCardData.pageid === removedItem.pageid) {
+                updateBookmarkIcon();
+            }
+        }
+
+        function viewSavedCard(index) {
+            const data = savedItems[index];
+            closeAllOverlays();
+            createCard(data);
+            setTimeout(() => {
+                app.scrollTo({ top: app.scrollHeight, behavior: 'smooth' });
+            }, 50);
+        }
+
+        function toggleSave() {
+            if(!currentCardData) return;
+            const idx = savedItems.findIndex(i => i.pageid === currentCardData.pageid);
+            if(idx > -1) savedItems.splice(idx, 1);
+            else savedItems.push(currentCardData);
+            
+            localStorage.setItem('wikitok_saved', JSON.stringify(savedItems));
+            updateBookmarkIcon();
+        }
+
+        function updateBookmarkIcon() {
+            if (!currentCardData) return;
+            const btn = document.getElementById('bookmarkBtn');
+            const icon = document.getElementById('bookmarkIcon');
+            const isSaved = savedItems.some(i => i.pageid === currentCardData.pageid);
+            
+            btn.classList.toggle('active', isSaved);
+            icon.innerText = isSaved ? 'bookmark' : 'bookmark_border';
+            icon.style.fontVariationSettings = isSaved ? "'FILL' 1" : "'FILL' 0";
+        }
+
+        // --- Fetch & Feed ---
+        async function fetchFact(isSurprise = false) {
+            isLoading = true;
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+
+                if (data.type !== 'standard' || seenIds.has(data.pageid) || !data.thumbnail) {
+                    return fetchFact(isSurprise); 
+                }
+                
+                if (isSurprise && data.extract.length < 100) {
+                    return fetchFact(isSurprise);
+                }
+
+                seenIds.add(data.pageid);
+                createCard(data);
+                
+                const loader = document.querySelector('#app .loader');
+                if (loader) loader.remove();
+
+            } catch (e) { console.log(e); } finally { isLoading = false; }
+        }
+
+        function createCard(data) {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.dataset.json = JSON.stringify(data);
+            div.dataset.id = data.pageid;
+
+            const imgUrl = data.thumbnail.source.replace(/\/\d+px-/, '/1200px-');
+            
+            div.innerHTML = `
+                <img src="${imgUrl}" class="card-bg" loading="lazy">
+                <div class="card-content">
+                    <div class="chip">${data.description || 'WikiTok'}</div>
+                    <h1>${data.title}</h1>
+                    <p>${data.extract}</p>
+                    <div class="read-more-trigger" onclick="openSheet(this)">
+                        ... Read more
+                    </div>
+                </div>
+            `;
+            app.appendChild(div);
+            observer.observe(div);
+        }
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    try {
+                        currentCardData = JSON.parse(e.target.dataset.json);
+                        updateBookmarkIcon();
+                    } catch(err){}
+                }
+            });
+        }, { threshold: 0.5 });
+
+        app.addEventListener('scroll', () => {
+            if ((app.scrollHeight - app.scrollTop - app.clientHeight) < 800 && !isLoading) fetchFact();
+        });
+
+        async function surpriseMe() {
+            const btn = document.querySelector('[title="Shuffle"]');
+            btn.style.transform = "rotate(180deg)";
+            setTimeout(() => btn.style.transform = "rotate(0deg)", 500);
+            await fetchFact(true);
+            app.scrollTo({ top: app.scrollHeight, behavior: 'smooth' });
+        }
+
+        (async () => { await fetchFact(); await fetchFact(); await fetchFact(); })();
+
+    </script>
+</body>
+</html>
